@@ -3,7 +3,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder
 
 app = FastAPI()
-TOKEN = "ВСТАВЬ_СЮДА_СВОЙ_ТОКЕН_ОТ_BOTFATHER" 
+TOKEN = "8870623888:AAETQiAOvRCev75LDP1hADXwQB0uG0bs-mU" 
 
 @app.get("/")
 async def root():

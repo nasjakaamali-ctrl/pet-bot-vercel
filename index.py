@@ -4,7 +4,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes
 
 app = FastAPI()
-TOKEN = os.environ.get("TELEGRAM_TOKEN", "ВСТАВЬ_СЮДА_ТОКЕН") 
+TOKEN = os.environ.get("TELEGRAM_TOKEN", "8870623888:AAETQiAOvRCev75LDP1hADXwQB0uG0bs-mU") 
 
 # Простая память для теста (в реальном проекте подключим базу позже)
 user_states = {}

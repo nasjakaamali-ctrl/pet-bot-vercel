@@ -5,8 +5,8 @@ import os
 
 app = FastAPI()
 
-# Твой токен уже встроен
-TOKEN = "8870623888:AAETQiAOvRCev75LDP1hADXwQB0uG0bs-mU" 
+# Твой новый чистый токен
+TOKEN = "8850430202:AAFiMCG5AMnkZ1CZTEIne8cb-6J4CetJuhw" 
 
 user_states = {}
 
@@ -18,7 +18,7 @@ async def handle_step(user_id, callback_data=None):
             user_states[user_id] = "pet_type"
             return "Кто у вас живёт?", InlineKeyboardMarkup([
                 [InlineKeyboardButton("🐱 Кошка", callback_data="type_cat")],
-                [InlineKeyboardButton(" Собака", callback_data="type_dog")]
+                [InlineKeyboardButton("🐶 Собака", callback_data="type_dog")]
             ])
         return "Привет! 👋 Соберём календарь ухода.", InlineKeyboardMarkup([
             [InlineKeyboardButton("Начать", callback_data="action_start")]

@@ -113,14 +113,14 @@ async def handle_step(user_id, chat_id, message_id, callback_data=None, text=Non
                 response_text = "Привет! 👋 Нажми кнопку ниже, чтобы начать."
                 keyboard = get_kb([[{"text": "Настроить календарь", "callback_data": "action_start"}]])
 
-    # --- ШАГ 2: ВИД ПИТОМЦА ---
+      # --- ШАГ 2: ВИД ПИТОМЦА ---
     elif state == "pet_type":
         if callback_data and callback_data.startswith("type_"):
             pet_type = callback_data.split("_")[1]
             supabase.table("pets").insert({"user_id": user['id'], "type": pet_type}).execute()
             
-            # ИСПРАВЛЕНО: переходим к количеству, а не к завершению
-            next_state = "pets_count"
+            # ВАЖНО: Здесь должно быть pets_count!
+            next_state = "pets_count" 
             response_text = "Сколько питомцев?"
             keyboard = get_kb([
                 [{"text": "1", "callback_data": "count_1"}],

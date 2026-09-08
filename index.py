@@ -1,11 +1,14 @@
 from fastapi import FastAPI, Request
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot
+import asyncio
 
 app = FastAPI()
 TOKEN = "8850430202:AAFiMCG5AMnkZ1CZTEIne8cb-6J4CetJuhw" 
 
-# Простая память вместо базы для теста
+# Создаем объект бота напрямую (без ApplicationBuilder)
+bot = Bot(token=TOKEN)
+
+# Простая память для теста
 user_states = {}
 
 async def handle_step(user_id, callback_data=None):
@@ -15,7 +18,7 @@ async def handle_step(user_id, callback_data=None):
         if callback_data == "action_start":
             user_states[user_id] = "pet_type"
             return "Кто у вас живёт?", InlineKeyboardMarkup([
-                [InlineKeyboardButton(" Кошка", callback_data="type_cat")],
+                [InlineKeyboardButton("🐱 Кошка", callback_data="type_cat")],
                 [InlineKeyboardButton("🐶 Собака", callback_data="type_dog")]
             ])
         return "Привет! 👋 Соберём календарь ухода.", InlineKeyboardMarkup([
@@ -34,18 +37,31 @@ async def handle_step(user_id, callback_data=None):
 async def webhook(request: Request):
     try:
         data = await request.json()
-        update = Update.de_json(data, ApplicationBuilder().token(TOKEN).build())
+        update = Update.de_json(data, bot)
         
         if update.callback_query:
             text, kb = await handle_step(update.effective_user.id, update.callback_query.data)
+            
+            # Явная отправка сообщений через объект bot
             if kb:
-                await update.callback_query.edit_message_text(text, reply_markup=kb)
+                await bot.edit_message_text(
+                    chat_id=update.callback_query.message.chat_id,
+                    message_id=update.callback_query.message.message_id,
+                    text=text,
+                    reply_markup=kb
+                )
             else:
-                await update.callback_query.message.reply_text(text)
+                await bot.send_message(
+                    chat_id=update.callback_query.message.chat_id,
+                    text=text
+                )
                 
         return {"status": "ok"}
     except Exception as e:
-        print(f"Error: {e}")
+        # Выводим ошибку в логи Vercel, чтобы видеть её
+        print(f"CRITICAL ERROR: {e}")
+        import traceback
+        traceback.print_exc()
         return {"status": "error", "message": str(e)}
 
 @app.get("/")

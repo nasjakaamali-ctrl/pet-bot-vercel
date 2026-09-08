@@ -119,17 +119,14 @@ async def handle_step(user_id, chat_id, message_id, callback_data=None, text=Non
             pet_type = callback_data.split("_")[1]
             supabase.table("pets").insert({"user_id": user['id'], "type": pet_type}).execute()
             
+            # ИСПРАВЛЕНО: переходим к количеству, а не к завершению
             next_state = "pets_count"
             response_text = "Сколько питомцев?"
             keyboard = get_kb([
                 [{"text": "1", "callback_data": "count_1"}],
                 [{"text": "2", "callback_data": "count_2"}],
-                [{"text": "3", "callback_data": "count_3"}],
-                [{"text": "4", "callback_data": "count_4"}],
-                [{"text": "5", "callback_data": "count_5"}],
-                [{"text": "6+", "callback_data": "count_6plus"}]
+                [{"text": "3+", "callback_data": "count_3plus"}]
             ])
-
     # --- ШАГ 3: КОЛИЧЕСТВО ---
     elif state == "pets_count":
         if callback_data and callback_data.startswith("count_"):

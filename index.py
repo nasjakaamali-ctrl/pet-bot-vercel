@@ -1,3 +1,7 @@
+# НАСТЯ_ПРОВЕРКА_ВЕРСИИ_2026
+from fastapi import FastAPI, Request
+import httpx
+...
 from fastapi import FastAPI, Request
 import httpx
 import json

@@ -1,11 +1,6 @@
 from fastapi import FastAPI, Request
 import httpx
 import json
-
-app = FastAPI()
-TOKEN = "8850430202:AAFiMCG5AMnkZ1CZTEIne8cb-6J4CetJuhw"
-BASE_URL = f"https://api.telegram.org/bot{TOKEN}"
-
 # Временная память вместо базы
 user_states = {}
 

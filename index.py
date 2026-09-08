@@ -6,7 +6,7 @@ from supabase import create_client, Client
 
 app = FastAPI()
 
-# --- НАСТРОЙКИ (ВСТАВЛЕНЫ ТВОИ ДАННЫЕ) ---
+# --- НАСТРОЙКИ (ТВОИ ДАННЫЕ УЖЕ ВНУТРИ) ---
 TOKEN = "8850430202:AAFiMCG5AMnkZ1CZTEIne8cb-6J4CetJuhw"
 SUPABASE_URL = "https://plwizboccrdnpjxljoed.supabase.co"
 SUPABASE_KEY = "sb_secret_b-yoFat4aqDr1v-oPNX1lg_gCQdproE"
@@ -60,6 +60,7 @@ def parse_natural_language(text):
 
 # --- ГЛАВНАЯ ЛОГИКА СОСТОЯНИЙ ---
 async def handle_step(user_id, chat_id, message_id, callback_data=None, text=None):
+    # Получаем пользователя из БД
     res = supabase.table("users").select("*").eq("telegram_id", user_id).execute()
     user = res.data[0] if res.data else None
     
@@ -93,9 +94,9 @@ async def handle_step(user_id, chat_id, message_id, callback_data=None, text=Non
             next_state = "pet_type"
             response_text = "Кто у вас живёт?"
             keyboard = get_kb([[
-                {"text": " Кошка", "callback_data": "type_cat"},
+                {"text": "🐱 Кошка", "callback_data": "type_cat"},
                 {"text": "🐶 Собака", "callback_data": "type_dog"},
-                {"text": "🐾 Другой", "callback_data": "type_other"}
+                {"text": " Другой", "callback_data": "type_other"}
             ]])
             
         elif text:
@@ -113,20 +114,24 @@ async def handle_step(user_id, chat_id, message_id, callback_data=None, text=Non
                 response_text = "Привет! 👋 Нажми кнопку ниже, чтобы начать."
                 keyboard = get_kb([[{"text": "Настроить календарь", "callback_data": "action_start"}]])
 
-      # --- ШАГ 2: ВИД ПИТОМЦА ---
+    # --- ШАГ 2: ВИД ПИТОМЦА (ИСПРАВЛЕНО!) ---
     elif state == "pet_type":
         if callback_data and callback_data.startswith("type_"):
             pet_type = callback_data.split("_")[1]
             supabase.table("pets").insert({"user_id": user['id'], "type": pet_type}).execute()
             
-            # ВАЖНО: Здесь должно быть pets_count!
+            # ТЕПЕРЬ ПЕРЕХОДИМ К КОЛИЧЕСТВУ, А НЕ К ФИНАЛУ
             next_state = "pets_count" 
             response_text = "Сколько питомцев?"
             keyboard = get_kb([
                 [{"text": "1", "callback_data": "count_1"}],
                 [{"text": "2", "callback_data": "count_2"}],
-                [{"text": "3+", "callback_data": "count_3plus"}]
+                [{"text": "3", "callback_data": "count_3"}],
+                [{"text": "4", "callback_data": "count_4"}],
+                [{"text": "5", "callback_data": "count_5"}],
+                [{"text": "6+", "callback_data": "count_6plus"}]
             ])
+
     # --- ШАГ 3: КОЛИЧЕСТВО ---
     elif state == "pets_count":
         if callback_data and callback_data.startswith("count_"):

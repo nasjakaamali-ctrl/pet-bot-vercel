@@ -1,68 +1,89 @@
 from fastapi import FastAPI, Request
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot
-import asyncio
+import httpx
+import json
 
 app = FastAPI()
-TOKEN = "8850430202:AAFiMCG5AMnkZ1CZTEIne8cb-6J4CetJuhw" 
+TOKEN = "8850430202:AAFiMCG5AMnkZ1CZTEIne8cb-6J4CetJuhw"
+BASE_URL = f"https://api.telegram.org/bot{TOKEN}"
 
-# Создаем объект бота напрямую (без ApplicationBuilder)
-bot = Bot(token=TOKEN)
-
-# Простая память для теста
+# Простая память
 user_states = {}
 
-async def handle_step(user_id, callback_data=None):
-    state = user_states.get(user_id, "new_user")
+async def send_message(chat_id, text, reply_markup=None):
+    payload = {"chat_id": chat_id, "text": text}
+    if reply_markup:
+        payload["reply_markup"] = json.dumps(reply_markup)
     
-    if state == "new_user":
-        if callback_data == "action_start":
-            user_states[user_id] = "pet_type"
-            return "Кто у вас живёт?", InlineKeyboardMarkup([
-                [InlineKeyboardButton("🐱 Кошка", callback_data="type_cat")],
-                [InlineKeyboardButton("🐶 Собака", callback_data="type_dog")]
-            ])
-        return "Привет! 👋 Соберём календарь ухода.", InlineKeyboardMarkup([
-            [InlineKeyboardButton("Настроить календарь", callback_data="action_start")]
-        ])
+    async with httpx.AsyncClient() as client:
+        await client.post(f"{BASE_URL}/sendMessage", json=payload)
+
+async def edit_message(chat_id, message_id, text, reply_markup=None):
+    payload = {"chat_id": chat_id, "message_id": message_id, "text": text}
+    if reply_markup:
+        payload["reply_markup"] = json.dumps(reply_markup)
         
-    elif state == "pet_type":
-        if callback_data and callback_data.startswith("type_"):
-            user_states[user_id] = "completed"
-            pet_name = "Кошка" if "cat" in callback_data else "Собака"
-            return f"Отлично! {pet_name} добавлена ✅\nБазовый уход настроен.", None
-            
-    return "Напиши /start", None
+    async with httpx.AsyncClient() as client:
+        await client.post(f"{BASE_URL}/editMessageText", json=payload)
+
+def get_keyboard(buttons_data):
+    """Превращает список кнопок в формат Telegram"""
+    keyboard = []
+    for row in buttons_data:
+        keyboard_row = []
+        for label, callback in row:
+            keyboard_row.append({"text": label, "callback_data": callback})
+        keyboard.append(keyboard_row)
+    return {"inline_keyboard": keyboard}
 
 @app.post("/")
 async def webhook(request: Request):
     try:
         data = await request.json()
-        update = Update.de_json(data, bot)
         
-        if update.callback_query:
-            text, kb = await handle_step(update.effective_user.id, update.callback_query.data)
+        # Ручной парсинг update (самый надежный для Vercel)
+        if "callback_query" in data:
+            cq = data["callback_query"]
+            user_id = cq["from"]["id"]
+            chat_id = cq["message"]["chat"]["id"]
+            message_id = cq["message"]["message_id"]
+            callback_data = cq.get("data")
             
-            # Явная отправка сообщений через объект bot
+            state = user_states.get(user_id, "new_user")
+            text = ""
+            kb = None
+            
+            # ЛОГИКА СОСТОЯНИЙ
+            if state == "new_user":
+                if callback_data == "action_start":
+                    user_states[user_id] = "pet_type"
+                    text = "Кто у вас живёт?"
+                    kb = get_keyboard([
+                        [(" Кошка", "type_cat"), ("🐶 Собака", "type_dog")]
+                    ])
+                else:
+                    text = "Привет! 👋 Соберём календарь ухода."
+                    kb = get_keyboard([[("Настроить календарь", "action_start")]])
+                    
+            elif state == "pet_type":
+                if callback_data and callback_data.startswith("type_"):
+                    user_states[user_id] = "completed"
+                    pet_name = "Кошка" if "cat" in callback_data else "Собака"
+                    text = f"Отлично! {pet_name} добавлена ✅\nБазовый уход настроен."
+                    # kb = None -> просто текст
+                    
+            # ОТПРАВКА ОТВЕТА
             if kb:
-                await bot.edit_message_text(
-                    chat_id=update.callback_query.message.chat_id,
-                    message_id=update.callback_query.message.message_id,
-                    text=text,
-                    reply_markup=kb
-                )
+                await edit_message(chat_id, message_id, text, kb)
             else:
-                await bot.send_message(
-                    chat_id=update.callback_query.message.chat_id,
-                    text=text
-                )
+                await send_message(chat_id, text)
                 
         return {"status": "ok"}
+        
     except Exception as e:
-        # Выводим ошибку в логи Vercel, чтобы видеть её
-        print(f"CRITICAL ERROR: {e}")
+        print(f"FATAL ERROR: {e}")
         import traceback
         traceback.print_exc()
-        return {"status": "error", "message": str(e)}
+        return {"status": "error"}
 
 @app.get("/")
 async def root():
